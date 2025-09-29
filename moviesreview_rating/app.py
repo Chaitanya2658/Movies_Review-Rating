@@ -8,30 +8,28 @@ from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_t
 # ----------------------------
 # Load environment variables
 # ----------------------------
-load_dotenv()  # for local .env
-
-# Use Streamlit secrets if available, fallback to .env
-TMDB_API_KEY = st.secrets.get("TMDB_API_KEY") or os.getenv("TMDB_API_KEY")
-OMDB_API_KEY = st.secrets.get("OMDB_API_KEY") or os.getenv("OMDB_API_KEY")
+load_dotenv()  # For local development
+TMDB_API_KEY = os.getenv("TMDB_API_KEY") or st.secrets.get("TMDB_API_KEY")
+OMDB_API_KEY = os.getenv("OMDB_API_KEY") or st.secrets.get("OMDB_API_KEY")
 
 # ----------------------------
-# Reviews file
+# Initialize reviews file
 # ----------------------------
 REVIEWS_FILE = "reviews.json"
 if not os.path.exists(REVIEWS_FILE):
     with open(REVIEWS_FILE, "w") as f:
         json.dump({}, f)
 
-# Load reviews
+# ----------------------------
+# Helper functions
+# ----------------------------
 def load_reviews():
     try:
         with open(REVIEWS_FILE, "r") as f:
             return json.load(f)
-    except Exception as e:
-        st.error(f"Error loading reviews: {str(e)}")
+    except Exception:
         return {}
 
-# Save reviews
 def save_reviews(reviews):
     try:
         with open(REVIEWS_FILE, "w") as f:
@@ -39,151 +37,150 @@ def save_reviews(reviews):
     except Exception as e:
         st.error(f"Error saving reviews: {str(e)}")
 
+def show_error(message):
+    st.error(message)
+
 # ----------------------------
-# Fetch trending movies (TMDB)
+# Fetch TMDB trending movies
 # ----------------------------
 @st.cache_data(show_spinner=False)
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(5), retry=retry_if_exception_type(requests.exceptions.RequestException))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2), retry=retry_if_exception_type(requests.exceptions.RequestException))
 def fetch_trending_movies():
+    if not TMDB_API_KEY:
+        show_error("TMDB API key is missing.")
+        return None
     try:
         response = requests.get(f"https://api.themoviedb.org/3/trending/movie/week?api_key={TMDB_API_KEY}")
         response.raise_for_status()
         data = response.json()
         if data.get("results"):
-            return [{
-                "Title": movie["title"],
-                "Year": movie["release_date"].split("-")[0] if movie["release_date"] else "N/A",
-                "Poster": f"https://image.tmdb.org/t/p/w500{movie['poster_path']}" if movie["poster_path"] else "https://via.placeholder.com/150",
-                "imdbID": f"tmdb_{movie['id']}"
-            } for movie in data["results"]]
-        st.error("No trending movies found.")
+            return [
+                {
+                    "Title": movie["title"],
+                    "Year": movie["release_date"].split("-")[0] if movie["release_date"] else "N/A",
+                    "Poster": f"https://image.tmdb.org/t/p/w500{movie['poster_path']}" if movie["poster_path"] else "https://via.placeholder.com/150",
+                    "imdbID": f"tmdb_{movie['id']}"
+                } for movie in data["results"]
+            ]
         return None
     except requests.exceptions.HTTPError as e:
-        if response.status_code == 401:
-            st.error("TMDB API key is invalid or unauthorized. Please regenerate your API key.")
-        else:
-            st.error(f"Error fetching trending movies: {str(e)}")
+        show_error(f"TMDB API error: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        show_error(f"Network error fetching trending movies: {e}")
         return None
     except Exception as e:
-        st.error(f"Error fetching trending movies: {str(e)}")
+        show_error(f"Error fetching trending movies: {e}")
         return None
 
 # ----------------------------
-# Fetch default movies (OMDB)
+# Fetch default OMDB movies
 # ----------------------------
 @st.cache_data(show_spinner=False)
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(5), retry=retry_if_exception_type(requests.exceptions.RequestException))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2), retry=retry_if_exception_type(requests.exceptions.RequestException))
 def fetch_default_movies():
+    if not OMDB_API_KEY:
+        show_error("OMDB API key is missing.")
+        return None
     try:
         response = requests.get(f"http://www.omdbapi.com/?s=movie&apikey={OMDB_API_KEY}")
         response.raise_for_status()
         data = response.json()
         if data.get("Response") == "True":
             return data["Search"]
-        st.error("No default movies found.")
+        return None
+    except requests.exceptions.HTTPError as e:
+        show_error(f"OMDB API error: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        show_error(f"Network error fetching default movies: {e}")
         return None
     except Exception as e:
-        st.error(f"Error fetching default movies: {str(e)}")
+        show_error(f"Error fetching default movies: {e}")
         return None
 
 # ----------------------------
-# Search movies (OMDB)
+# Fetch movie details from OMDB
 # ----------------------------
 @st.cache_data(show_spinner=False)
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(5), retry=retry_if_exception_type(requests.exceptions.RequestException))
-def search_movies(query):
-    try:
-        response = requests.get(f"http://www.omdbapi.com/?s={query}&apikey={OMDB_API_KEY}")
-        response.raise_for_status()
-        data = response.json()
-        if data.get("Response") == "True":
-            return data["Search"]
-        return None
-    except Exception as e:
-        st.error(f"Error searching movies: {str(e)}")
-        return None
-
-# ----------------------------
-# Fetch movie details (OMDB)
-# ----------------------------
-@st.cache_data(show_spinner=False)
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(5), retry=retry_if_exception_type(requests.exceptions.RequestException))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2), retry=retry_if_exception_type(requests.exceptions.RequestException))
 def fetch_movie_details(imdb_id):
+    if not OMDB_API_KEY:
+        return {"Plot": "N/A", "imdbRating": "N/A"}
     try:
         response = requests.get(f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}")
         response.raise_for_status()
         data = response.json()
-        if data.get("Response") == "True":
-            return {"Plot": data.get("Plot", "N/A"), "imdbRating": data.get("imdbRating", "N/A")}
-        return {"Plot": "N/A", "imdbRating": "N/A"}
-    except Exception as e:
-        st.error(f"Error fetching movie details: {str(e)}")
+        return {"Plot": data.get("Plot", "N/A"), "imdbRating": data.get("imdbRating", "N/A")}
+    except Exception:
         return {"Plot": "N/A", "imdbRating": "N/A"}
 
 # ----------------------------
-# Main Streamlit App
+# Main app
 # ----------------------------
 def main():
-    # Load CSS
+    st.set_page_config(page_title="🎬 Trending Movies & Public Reviews", layout="wide")
+
+    # Load CSS if exists
     try:
         with open("style.css") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"Error loading CSS: {str(e)}")
+    except FileNotFoundError:
+        pass  # Ignore if style.css is missing
 
-    # Header
-    st.markdown("<h1>🎬 Trending Movies & Public Reviews</h1>", unsafe_allow_html=True)
+    st.title("🎬 Trending Movies & Public Reviews")
 
-    # Search input
-    query = st.text_input("Search for a movie...", key="search_input", placeholder="Enter movie title...")
+    # Search box
+    query = st.text_input("Search for a movie...", placeholder="Enter movie title...")
 
     # Load movies
     movies = None
     if query:
-        with st.spinner("Searching..."):
-            movies = search_movies(query)
-            if not movies:
-                st.error("No movies found.")
+        with st.spinner("Searching movies..."):
+            try:
+                response = requests.get(f"http://www.omdbapi.com/?s={query}&apikey={OMDB_API_KEY}")
+                response.raise_for_status()
+                data = response.json()
+                if data.get("Response") == "True":
+                    movies = data["Search"]
+                else:
+                    show_error(f"No movies found for '{query}'")
+            except Exception as e:
+                show_error(f"Error fetching movies: {e}")
     else:
         with st.spinner("Loading trending movies..."):
             movies = fetch_trending_movies()
             if not movies:
                 movies = fetch_default_movies()
                 if not movies:
-                    st.error("Failed to load movies.")
+                    show_error("Failed to load movies.")
 
     # Display movies
     if movies:
-        st.markdown('<div id="movies">', unsafe_allow_html=True)
         reviews = load_reviews()
         for movie in movies:
             movie_id = movie["imdbID"]
             if movie_id not in reviews:
                 reviews[movie_id] = {"comments": []}
-
             col1, col2 = st.columns([1, 2], gap="small")
             with col1:
-                st.image(movie["Poster"], width=200)
+                st.image(movie.get("Poster", "https://via.placeholder.com/150"), width=200)
             with col2:
-                st.markdown(f"<h3>{movie['Title']} ({movie['Year']})</h3>", unsafe_allow_html=True)
-                if movie_id.startswith("tt"):  # OMDB
+                st.subheader(f"{movie['Title']} ({movie['Year']})")
+                if movie_id.startswith("tt"):
                     details = fetch_movie_details(movie_id)
-                    st.markdown(f"<p>{details['Plot']}</p>", unsafe_allow_html=True)
-                    st.markdown(f'<p class="rating">IMDb: {details["imdbRating"]}/10</p>', unsafe_allow_html=True)
-
+                    st.write(details["Plot"])
+                    st.write(f"IMDb: {details['imdbRating']}/10")
                 review_text = st.text_area(f"Leave a review for {movie['Title']}", key=f"review_{movie_id}", placeholder="Your review...")
                 if st.button("Add Review", key=f"submit_{movie_id}"):
                     if review_text.strip():
                         reviews[movie_id]["comments"].append(review_text)
                         save_reviews(reviews)
                         st.success("Review added!")
-                        st.experimental_rerun()
                     else:
                         st.warning("Please enter a review.")
-
                 for comment in reviews[movie_id]["comments"]:
-                    st.markdown(f'<div class="user-reviews"><p>{comment}</p></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown(f"<div class='user-reviews'>{comment}</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
