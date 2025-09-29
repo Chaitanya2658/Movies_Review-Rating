@@ -1,3 +1,4 @@
+/* style.css */
 * {
   margin: 0;
   padding: 0;
@@ -124,4 +125,23 @@ p {
 
 .toast.show {
   opacity: 1;
+}
+
+.suggestions {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  max-width: 500px;
+  margin: 0 auto;
+  z-index: 1000;
+}
+
+.suggestion {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.suggestion:hover {
+  background-color: #f0f0f0;
 }
