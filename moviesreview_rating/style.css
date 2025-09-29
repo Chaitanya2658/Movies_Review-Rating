@@ -1,0 +1,127 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+h1 {
+  background-color: #333;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.search-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.stTextInput > div {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.stTextInput input {
+  padding: 0.5rem;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.stButton button {
+  padding: 0.5rem 1rem;
+  background-color: #ff4757;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.stButton button:hover {
+  background-color: #e84118;
+}
+
+#movies {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.stImage img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+h3 {
+  margin: 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+p {
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.rating {
+  color: #f39c12;
+  font-weight: bold;
+}
+
+.stTextArea textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+  font-size: 0.9rem;
+}
+
+.stButton button[aria-label^="Add Review"] {
+  margin-top: 0.5rem;
+  background-color: #2ed573;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.stButton button[aria-label^="Add Review"]:hover {
+  background-color: #26a65b;
+}
+
+.user-reviews p {
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0.3rem 0;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #333;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1000;
+}
+
+.toast.show {
+  opacity: 1;
+}

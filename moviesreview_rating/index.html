@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Review & Rating Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Movie Review & Rating Platform</h1>
+        <button class="theme-toggle" aria-label="Toggle theme">🌙</button>
+    </header>
+    <div class="container">
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search for a movie..." aria-label="Search movies">
+            <button onclick="searchMovies()">Search</button>
+            <div class="suggestions" id="suggestions"></div>
+        </div>
+        <h2 id="movieGridTitle">Trending Movies</h2>
+        <div class="movie-grid" id="movieGrid"></div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script src="script.js"></script>
+</body>
+</html>
